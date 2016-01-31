@@ -70,6 +70,7 @@ if test "x$GCC" = "xyes"; then
 fi
 
 PKG_CHECK_MODULES([CURL], [libcurl])
+PKG_CHECK_MODULES([XML2], [libxml-2.0])
 
 AC_CONFIG_FILES([
 libplex.pc

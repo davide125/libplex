@@ -20,6 +20,9 @@
  */
 
 #include <curl/curl.h>
+#include <libxml/parser.h>
+#include <libxml/xpath.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,11 +68,13 @@ int plex_global_init() {
     if (ret != 0) {
         return 1;
     }
+    xmlInitParser();
     return 0;
 }
 
 void plex_global_cleanup() {
     curl_global_cleanup();
+    xmlCleanupParser();
 }
 
 const char *plex_get_auth_token(const char *username, const char *password) {
@@ -80,6 +85,12 @@ const char *plex_get_auth_token(const char *username, const char *password) {
     if (curl) {
         const char *token;
         struct string s;
+        xmlDocPtr doc;
+        xmlChar *query = (xmlChar*) "/user/authentication-token/text()";
+        xmlXPathContext *context;
+        xmlXPathObject *result;
+        xmlNode *node;
+
         init_string(&s);
 
         curl_easy_setopt(curl, CURLOPT_URL, "https://my.plexapp.com/users/sign_in.xml");
@@ -105,8 +116,19 @@ const char *plex_get_auth_token(const char *username, const char *password) {
             fprintf(stderr, "curl failed: %s\n", curl_easy_strerror(res));
             return NULL;
         }
+        doc = xmlParseMemory(s.ptr, s.len);
+        if (doc == NULL) {
+            fprintf(stderr, "Failed to parse document");
+            return NULL;
+        }
 
-        token = strdup(s.ptr);
+        context = xmlXPathNewContext(doc);
+        result = xmlXPathEvalExpression(query, context);
+        node = result->nodesetval->nodeTab[0];
+        token = strdup((char *)node->content);
+        xmlXPathFreeObject(result);
+
+        xmlFreeDoc(doc);
         free(s.ptr);
 
         return token;
