@@ -21,8 +21,31 @@
 
 #include <plex.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main (int argc, char **argv)
 {
-    return plex_global_init();
+    char *user = getenv("PLEX_USERNAME");
+    char *password = getenv("PLEX_PASSWORD");
+    const char *token;
+
+    if (user == NULL || password == NULL) {
+        printf("No user or password\n");
+        return 1;
+    }
+
+    if (plex_global_init() != 0) {
+        printf("Failed to init libplex!\n");
+        return 1;
+    }
+
+    token = plex_get_auth_token(user, password);
+    if (!token) {
+        printf("Failed to get auth token\n");
+        return 1;
+    }
+    printf("PleX auth token: %s\n", token);
+
+    plex_global_cleanup();
+    return 0;
 }

@@ -29,6 +29,8 @@ extern "C" {
 #define LIBPLEX_VERSION "0.0.1"
 
 int plex_global_init();
+void plex_global_cleanup();
+const char *plex_get_auth_token(const char *username, const char *password);
 
 #ifdef __cplusplus
 }
