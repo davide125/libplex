@@ -69,6 +69,8 @@ if test "x$GCC" = "xyes"; then
   CFLAGS="$CFLAGS -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
 fi
 
+PKG_CHECK_MODULES([CURL], [libcurl])
+
 AC_CONFIG_FILES([
 libplex.pc
 Makefile

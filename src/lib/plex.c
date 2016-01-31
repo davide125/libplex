@@ -19,8 +19,14 @@
  * Foundation, Inc, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include <curl/curl.h>
+
 #include "plex.h"
 
 int plex_global_init() {
+    CURLcode ret = curl_global_init(CURL_GLOBAL_ALL);
+    if (!ret) {
+      return 1;
+    }
     return 0;
 }

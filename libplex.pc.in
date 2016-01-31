@@ -7,4 +7,5 @@ Name: @PACKAGE_NAME@
 Description: Interface to PleX REST API
 Version: @VERSION@
 Libs: -L${libdir} -lplex
+Libs.private: @CURL_LIBS@
 Cflags: -I${includedir}

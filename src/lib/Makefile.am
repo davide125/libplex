@@ -8,3 +8,6 @@ include_HEADERS = plex.h
 
 libplex_la_LDFLAGS = -version-info @version_info@
 
+libplex_la_LIBADD = ${CURL_LIBS}
+
+libplex_la_CPPFLAGS = ${CURL_CFLAGS}
