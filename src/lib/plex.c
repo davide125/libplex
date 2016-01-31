@@ -184,7 +184,7 @@ const char *plex_get_device_uri(const char *token, const char *name) {
     context = xmlXPathNewContext(doc);
     result = xmlXPathEvalExpression((xmlChar*)query, context);
     node = result->nodesetval->nodeTab[0];
-    uri = strdup((char *)xmlGetProp(node, "uri"));
+    uri = strdup((char *)xmlGetProp(node, (xmlChar*)"uri"));
     xmlXPathFreeObject(result);
     curl_slist_free_all(list);
 
