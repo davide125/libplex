@@ -103,19 +103,10 @@ const char *plex_get_auth_token(const char *username, const char *password) {
         curl_easy_setopt(curl, CURLOPT_URL, "https://my.plexapp.com/users/sign_in.xml");
 		    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
 		    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
         curl_easy_setopt(curl, CURLOPT_USERNAME, username);
         curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36");
-        list = curl_slist_append(list, "X-Plex-Platform: Linux");
-        list = curl_slist_append(list, "X-Plex-Platform-Version: 3.19.5-100.fc20.x86_64");
         list = curl_slist_append(list, "X-Plex-Client-Identifier: 0x7c7a91b82d2eL");
-        list = curl_slist_append(list, "X-Plex-Device: Linux-3.19.5-100.fc20.x86_64-x86_64-with-fedora-20-Heisenbug");
-        list = curl_slist_append(list, "X-Plex-Product: PlexAPI");
-        list = curl_slist_append(list, "X-Plex-Provides: player,controller");
-        list = curl_slist_append(list, "X-Plex-Version: 1.1.0");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
 
         res = curl_easy_perform(curl);
