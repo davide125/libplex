@@ -46,6 +46,12 @@ int main (int argc, char **argv)
     }
     printf("PleX auth token: %s\n", token);
 
+    if (argc > 1) {
+        char *device = argv[1];
+        const char *uri = plex_get_device_uri(token, device);
+        printf("Device URI for %s: %s\n", device, uri);
+    }
+
     plex_global_cleanup();
     return 0;
 }

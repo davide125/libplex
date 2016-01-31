@@ -31,6 +31,7 @@ extern "C" {
 int plex_global_init();
 void plex_global_cleanup();
 const char *plex_get_auth_token(const char *username, const char *password);
+const char *plex_get_device_uri(const char *token, const char *name);
 
 #ifdef __cplusplus
 }

@@ -31,6 +31,8 @@
 
 /* Private */
 
+CURL *curl;
+
 struct string {
     char *ptr;
     size_t len;
@@ -68,11 +70,16 @@ int plex_global_init() {
     if (ret != 0) {
         return 1;
     }
+    curl = curl_easy_init();
+    if (curl == NULL) {
+        return 1;
+    }
     xmlInitParser();
     return 0;
 }
 
 void plex_global_cleanup() {
+    curl_easy_cleanup(curl);
     curl_global_cleanup();
     xmlCleanupParser();
 }
@@ -80,7 +87,7 @@ void plex_global_cleanup() {
 const char *plex_get_auth_token(const char *username, const char *password) {
     CURLcode res;
     struct curl_slist *list = NULL;
-    CURL *curl = curl_easy_init();
+    curl_easy_reset(curl);
 
     if (curl) {
         const char *token;
@@ -128,6 +135,7 @@ const char *plex_get_auth_token(const char *username, const char *password) {
         token = strdup((char *)node->content);
         xmlXPathFreeObject(result);
 
+        curl_slist_free_all(list);
         xmlFreeDoc(doc);
         free(s.ptr);
 
@@ -135,4 +143,50 @@ const char *plex_get_auth_token(const char *username, const char *password) {
     }
 
     return NULL;
+}
+
+const char *plex_get_device_uri(const char *token, const char *name) {
+    CURLcode res;
+    struct curl_slist *list = NULL;
+    struct string s;
+    char query[1024];
+    char tokenh[14+20+1];
+    xmlDoc *doc;
+    xmlXPathContext *context;
+    xmlXPathObject *result;
+    xmlNode *node;
+    const char *uri;
+
+    init_string(&s);
+    memset(query, 0, 1024);
+    snprintf(query, 1024, "/MediaContainer/Device[@name=\"%s\"]/Connection[@local=1]", name);
+    memset(tokenh, 0, 14+20+1);
+    snprintf(tokenh, 14+20+1, "X-Plex-Token: %s", token);
+
+    curl_easy_reset(curl);
+    curl_easy_setopt(curl, CURLOPT_URL, "https://plex.tv/api/resources?includeHttps=1");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
+    list = curl_slist_append(list, tokenh);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
+    res = curl_easy_perform(curl);
+    if(res != CURLE_OK) {
+        fprintf(stderr, "curl failed: %s\n", curl_easy_strerror(res));
+        return NULL;
+    }
+    doc = xmlParseMemory(s.ptr, s.len);
+    if (doc == NULL) {
+        fprintf(stderr, "Failed to parse document");
+        return NULL;
+    }
+
+    context = xmlXPathNewContext(doc);
+    result = xmlXPathEvalExpression((xmlChar*)query, context);
+    node = result->nodesetval->nodeTab[0];
+    uri = strdup((char *)xmlGetProp(node, "uri"));
+    xmlXPathFreeObject(result);
+    curl_slist_free_all(list);
+
+    return uri;
 }
