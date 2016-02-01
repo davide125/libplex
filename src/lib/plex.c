@@ -23,6 +23,7 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +62,59 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
     s->len = new_len;
 
     return size*nmemb;
+}
+
+const char *make_header(const char *key, const char *value) {
+    const int BUFSIZE = 1000;
+    char *buf = malloc(BUFSIZE);
+    const char *header;
+
+    snprintf(buf, BUFSIZE, "%s: %s", key, value);
+    header = strdup(buf);
+    free(buf);
+
+    return header;
+}
+
+/* remember to dispose result with xmlXPathFreeObject() when done */
+xmlXPathObject *curl_and_xpath(const char *token, const char *uri, const char *queryfmt, ...) {
+    const int QUERY_SIZE = 1024;
+    char *query = malloc(QUERY_SIZE);
+    CURLcode res;
+    struct curl_slist *list = NULL;
+    struct string s;
+    xmlDoc *doc;
+    xmlXPathContext *context;
+    xmlXPathObject *result;
+    va_list argptr;
+    va_start(argptr, queryfmt);
+    vsnprintf(query, QUERY_SIZE, queryfmt, argptr);
+    va_end(argptr);
+
+    init_string(&s);
+    curl_easy_reset(curl);
+    curl_easy_setopt(curl, CURLOPT_URL, uri);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
+    list = curl_slist_append(list, make_header("X-Plex-Token", token));
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
+    res = curl_easy_perform(curl);
+    if(res != CURLE_OK) {
+        fprintf(stderr, "curl failed: %s\n", curl_easy_strerror(res));
+        return NULL;
+    }
+    doc = xmlParseMemory(s.ptr, s.len);
+    if (doc == NULL) {
+        fprintf(stderr, "Failed to parse document");
+        return NULL;
+    }
+
+    context = xmlXPathNewContext(doc);
+    result = xmlXPathEvalExpression((xmlChar*)query, context);
+    free(query);
+
+    return result;
 }
 
 /* Public */
@@ -137,47 +191,15 @@ const char *plex_get_auth_token(const char *username, const char *password) {
 }
 
 const char *plex_get_device_uri(const char *token, const char *name) {
-    CURLcode res;
-    struct curl_slist *list = NULL;
-    struct string s;
-    char query[1024];
-    char tokenh[14+20+1];
-    xmlDoc *doc;
-    xmlXPathContext *context;
-    xmlXPathObject *result;
+    xmlXPathObject *result = curl_and_xpath(token,
+        "https://plex.tv/api/resources?includeHttps=1",
+        "/MediaContainer/Device[@name=\"%s\"]/Connection[@local=1]", name);
     xmlNode *node;
     const char *uri;
 
-    init_string(&s);
-    memset(query, 0, 1024);
-    snprintf(query, 1024, "/MediaContainer/Device[@name=\"%s\"]/Connection[@local=1]", name);
-    memset(tokenh, 0, 14+20+1);
-    snprintf(tokenh, 14+20+1, "X-Plex-Token: %s", token);
-
-    curl_easy_reset(curl);
-    curl_easy_setopt(curl, CURLOPT_URL, "https://plex.tv/api/resources?includeHttps=1");
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
-    list = curl_slist_append(list, tokenh);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-
-    res = curl_easy_perform(curl);
-    if(res != CURLE_OK) {
-        fprintf(stderr, "curl failed: %s\n", curl_easy_strerror(res));
-        return NULL;
-    }
-    doc = xmlParseMemory(s.ptr, s.len);
-    if (doc == NULL) {
-        fprintf(stderr, "Failed to parse document");
-        return NULL;
-    }
-
-    context = xmlXPathNewContext(doc);
-    result = xmlXPathEvalExpression((xmlChar*)query, context);
     node = result->nodesetval->nodeTab[0];
     uri = strdup((char *)xmlGetProp(node, (xmlChar*)"uri"));
     xmlXPathFreeObject(result);
-    curl_slist_free_all(list);
 
     return uri;
 }
