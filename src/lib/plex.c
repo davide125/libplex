@@ -162,6 +162,9 @@ const char *plex_get_auth_token(const char *username, const char *password) {
         curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
         list = curl_slist_append(list, "X-Plex-Client-Identifier: 0x7c7a91b82d2eL");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+        // We must send a blank post field otherwise libcurl sends Content-Length
+        // of -1 which confuses plex and it sends a 400.
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
 
         res = curl_easy_perform(curl);
         if(res != CURLE_OK) {
